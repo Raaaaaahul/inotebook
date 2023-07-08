@@ -20,9 +20,10 @@ router.post(
   ],
   async (req, res) => {
     //return bad request in case error is encountered
+    let success = false;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({success,errors: errors.array() });
     }
     //check wheather the user with the same email exists or not
     try {
@@ -31,7 +32,7 @@ router.post(
       if (user) {
         return res
           .status(400)
-          .json({ error: "A user already exists with this email!" });
+          .json({success, error: "A user already exists with this email!" });
       }
       const salt = await bcrypt.genSalt(10);
       const secPass = await bcrypt.hash(req.body.password, salt);
@@ -46,10 +47,10 @@ router.post(
           id: user.id,
         },
       };
-
+      success = true;
       const authToken = jwt.sign(data, JWT_SECRET);
-      console.log(authToken);
-      res.json({ authToken });
+      console.log(success,authToken);
+      res.json({ success,authToken });
     } catch (error) {
       console.error(error.message);
       res.status(500).send("INTERNAL SERVER ERROR ");
@@ -67,6 +68,7 @@ router.post(
   ],
   async (req, res) => {
     //if error occured return the error message
+    let success = false;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -79,12 +81,14 @@ router.post(
       let user = await User.findOne({ email });
       //if the user doesnot exists in the database
       if (!user) {
-        return res.status(400).json({ error: "Wrong Credentials" });
+        success = false
+        return res.status(400).json({success, error: "Wrong Credentials" });
       }
       const passwordCompare = await bcrypt.compare(password, user.password);
       //if the password entered by the user doesnot matches the password in the database
       if (!passwordCompare) {
-        return res.status(400).json({ error: "Wrong Credentials" });
+        success = false
+        return res.status(400).json({success, error: "Wrong Credentials" });
       }
       //if user exists and the password of the user validates then
       //we will send the payload
@@ -96,7 +100,8 @@ router.post(
       };
       //sign the document using authToken
       const authToken = jwt.sign(data, JWT_SECRET);
-      res.json({ authToken });
+      success = true;
+      res.json({ success,authToken });
     } catch (error) {
       console.error(error.message);
       res.status(500).send("INTERNAL SERVER ERROR");
